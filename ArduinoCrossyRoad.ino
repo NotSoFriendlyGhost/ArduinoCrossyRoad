@@ -10,8 +10,10 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(SIZE, SIZE, PIN,                 
                                                NEO_GRB + NEO_KHZ800);
 
 
-unsigned long obstacleUpdate;
-void reset();
+unsigned long obstacleUpdate; // Used to time obstacle speed
+
+void reset(); // Define function
+
 struct Player {
   uint16_t playerColor;
   int topLeftX = 7;
@@ -21,11 +23,11 @@ struct Player {
     topLeftY = y;
     playerColor = c;
   }
-  void draw() {
+  void draw() { // Draw player on screen
     matrix.drawPixel(topLeftX, topLeftY, playerColor);
     matrix.drawPixel(topLeftX, topLeftY + 1, 0);
   }
-  void forward() {
+  void forward() { // Move up, end game if win
     if (topLeftY > 0) {
       topLeftY--;
     }
@@ -33,7 +35,7 @@ struct Player {
       win();
     }
   }
-  void splat() {
+  void splat() { // Reset position if collision detected
     uint16_t red = matrix.Color(255, 0, 0);
     matrix.drawPixel(topLeftX, topLeftY, red);
     matrix.drawPixel(topLeftX, topLeftY + 1, red);
@@ -41,7 +43,7 @@ struct Player {
     matrix.drawPixel(topLeftX + 1, topLeftY, red);
     matrix.drawPixel(topLeftX - 1, topLeftY, red);
   }
-  void win(){
+  void win(){ // Fill screen with player color
     matrix.fillScreen(playerColor);
     matrix.show();
     delay(2000);
@@ -72,7 +74,7 @@ struct Obstacle {
     obsColor = obsColors[colorNum];
     length = random() % 3 + 1;
   }
-  void update() {
+  void update() { // Move obstacle depending on direction
     if (direction == -1) {
       for (int i = posX; i < min(posX + length, 16); i++) {
         obstacle[posY][i] = 0;
@@ -100,7 +102,7 @@ struct Obstacle {
       }
     }
   }
-  void respawn() {
+  void respawn() { // Move obstacle to new random position and direction
     posY = random() % 14 + 1;
     int d = random() % 2;
     if (d == 0) {
@@ -117,7 +119,6 @@ struct Obstacle {
   }
 };
 
-
 int startButton = 6;
 int lButton = 8;
 int rButton = 9;
@@ -125,12 +126,19 @@ int rButton = 9;
 int singlePlayer = 11;
 int twoPlayer = 12;
 
+int p1LED = 2;
+int p2LED = 3;
+
+const int numObs = 25;
+struct Obstacle obsObjects[numObs];
+
 Player p1(5, 15, matrix.Color(255, 255, 255));
 Player p2(10, 15, matrix.Color(0, 0, 255));
 
 bool gameOver = false;
 bool won = 0;
 
+// reset game
 void reset(){
   p1.topLeftX = 5;
   p1.topLeftY = 15;
@@ -138,13 +146,28 @@ void reset(){
   p2.topLeftY = 15;
   p1.draw();
   p2.draw();
-  while(digitalRead(startButton)==LOW){
+  for (int i = 0; i < numObs; i++) {
+    obsObjects[i].posY = random() % 14 + 1;
+    int d = random() % 2;
+    if (d == 0) {
+      obsObjects[i].direction = -1;
+    }
+    if (d == 1) {
+      obsObjects[i].direction = 1;
+    }
+    obsObjects[i].posX = random() % 14 + 1;
+    int colorNum = random() % 3;
+    obsObjects[i].obsColor = obsColors[colorNum];
+    obsObjects[i].length = random() % 3 + 1;
+  }
+  while(digitalRead(startButton)==LOW){ // Wait until start button pressed
 
   }
   return;
 
 }
 
+// Draw all objects
 void updateScreen() {
   matrix.fillScreen(0);
   for (int i = 0; i < 16; i++) {
@@ -160,6 +183,7 @@ void updateScreen() {
   delay(50);
 }
 
+// Check buttons
 void checkInput() {
   if (digitalRead(lButton) == HIGH) {
     p1.forward();
@@ -194,12 +218,6 @@ void checkCollision() {
   }
 }
 
-int p1LED = 2;
-int p2LED = 3;
-
-const int numObs = 25;
-struct Obstacle obsObjects[numObs];
-
 void setup() {
   obstacle[1][0] = 1;
   obstacle[3][5] = 1;
@@ -214,20 +232,6 @@ void setup() {
   digitalWrite(p1LED, HIGH);
   digitalWrite(p2LED, HIGH);
   randomSeed(analogRead(A0));
-  for (int i = 0; i < numObs; i++) {
-    obsObjects[i].posY = random() % 14 + 1;
-    int d = random() % 2;
-    if (d == 0) {
-      obsObjects[i].direction = -1;
-    }
-    if (d == 1) {
-      obsObjects[i].direction = 1;
-    }
-    obsObjects[i].posX = random() % 14 + 1;
-    int colorNum = random() % 3;
-    obsObjects[i].obsColor = obsColors[colorNum];
-    obsObjects[i].length = random() % 3 + 1;
-  }
   reset();
   obstacleUpdate = millis();
   matrix.fillScreen(matrix.Color(0, 255, 0));
